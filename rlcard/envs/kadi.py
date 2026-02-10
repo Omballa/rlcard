@@ -14,7 +14,7 @@ DEFAULT_GAME_CONFIG = {
 class KadiEnv(Env):
 
     def __init__(self, config):
-        self.name = 'kadi'
+        self.name = 'uno'
         self.default_game_config = DEFAULT_GAME_CONFIG
         self.game = Game()
         super().__init__(config)
