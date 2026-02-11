@@ -1,5 +1,5 @@
 
-from rlcard.games.uno.utils import init_deck
+from rlcard.games.kadi.utils import init_deck
 
 
 class KadiDealer:
@@ -17,7 +17,7 @@ class KadiDealer:
         '''
         self.np_random.shuffle(self.deck)
 
-    def deal_cards(self, player, num):
+    def deal_cards(self, player, num, round):
         ''' Deal some cards from deck to one player
 
         Args:
@@ -28,7 +28,7 @@ class KadiDealer:
             if self.deck:  # Safety check
                 player.hand.append(self.deck.pop())
             else:
-                raise ValueError("Deck is empty - cannot deal card")
+                round.replace_deck()
 
 
     def flip_top_card(self):

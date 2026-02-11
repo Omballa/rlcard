@@ -37,14 +37,15 @@ class KadiGame:
         # Initialize four players to play the game
         self.players = [Player(i, self.np_random) for i in range(self.num_players)]
 
+
+        # Initialize the round (KadiRound handles Kadi-specific rules: chaining, Niko Kadi, etc.)
+        self.round = Round(self.dealer, self.num_players, self.np_random)
+
         # Deal initial cards
         # Common Kadi starting hand sizes: 4 cards for 2–3 players, 3 for 4–5 players
         cards_per_player = 4 if self.num_players <= 3 else 3
         for player in self.players:
-            self.dealer.deal_cards(player, cards_per_player)
-
-        # Initialize the round (KadiRound handles Kadi-specific rules: chaining, Niko Kadi, etc.)
-        self.round = Round(self.dealer, self.num_players, self.np_random)
+            self.dealer.deal_cards(player, cards_per_player, self.round)
 
         # flip and perfrom top card
         top_card = self.round.flip_top_card()

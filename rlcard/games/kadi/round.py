@@ -83,6 +83,17 @@ class KadiRound:
         self.played_cards.append(card)
         self.target = card
 
+        # Check win (after full chain/turn)
+        if len(player.hand) == 0:
+            if not player.niko_kadi_declared:  # Must have announced previous turn
+                # Optional: check final card was Answer (4-7,9,10,A) — variant-dependent
+                self.is_over = True
+                self.winner = [self.current_player]
+            else:
+                # Penalty for invalid win attempt (e.g. draw 2–4 cards)
+                self.dealer.deal_cards(player, 4, self)
+                player.niko_kadi_declared = False
+
         # Reset pending if countered
         self.pending_penalty = 0
         self.pending_question_suit = None
@@ -90,16 +101,6 @@ class KadiRound:
         # Apply effects
         self._apply_card_effect(players, card)
 
-        # Check win (after full chain/turn)
-        if len(player.hand) == 0:
-            if player.niko_kadi_declared:  # Must have announced previous turn
-                # Optional: check final card was Answer (4-7,9,10,A) — variant-dependent
-                self.is_over = True
-                self.winner = [self.current_player]
-            else:
-                # Penalty for invalid win attempt (e.g. draw 2–4 cards)
-                self.dealer.deal_cards(player, 4)
-                player.niko_kadi_declared = False
     
     def _find_and_remove_card(self, player, action_str):
         """Find card in hand by str ('h-A', 'JOK') and remove it."""
@@ -129,7 +130,7 @@ class KadiRound:
 
         elif rank in ['Q', '8']:
             self.pending_question_suit = card.suit
-            self.current_player = next_idx  # Next must answer same suit
+            # self.current_player = next_idx  # Next must answer same suit
 
         elif rank == 'A':
             # Ace: player declares new suit (handled in action? or sub-action)
@@ -147,38 +148,63 @@ class KadiRound:
         player = players[player_id]
         hand = player.hand
         legal = []
+
         target_suit = self.target.suit if self.target else None
         target_rank = self.target.rank if self.target else None
+        
+        # Case 1: There is an active penalty → can only counter or draw
+        if self.pending_penalty > 0:
+            for card in hand:
+                if card.rank in ['2', '3', 'JOK'] and card.rank == target_rank:
+                    legal.append(card.str)
+                    
 
-        has_penalty_counter = False
-
-        for card in hand:
-            card_str = card.str
-
-            if self.pending_penalty > 0:
-                # Must counter penalty or draw (but draw handled separately)
-                if card.rank in ['2','3','JOK'] and card.rank == self.target.rank:
-                    legal.append(card_str)
-                    has_penalty_counter = True
-
-            elif self.pending_question_suit:
-                # Must play same suit (Answer card) or draw
-                legal_answers_rank = ['4','5','6','7','9']
-                if card.suit == self.pending_question_suit and card.rank in legal_answers_rank:
-                    legal.append(card_str)
-
-            else:
-                # Normal play: match suit or rank, or Joker (wild-ish)
-                if card.suit == target_suit or card.rank == target_rank or card.rank == 'JOK':
-                    legal.append(card_str)
-
-        if not legal:
-            if self.pending_penalty > 0 or self.pending_question_suit:
-                # Can only draw if cannot counter
+            if not legal:
                 legal = ['draw']
-            else:
-                legal = ['draw']  # Always can draw if no play
 
+        # Case 2: Question is pending → must play same-suit Answer or draw
+        elif self.pending_question_suit:
+            answer_ranks = {'4', '5', '6', '7', '9', '10'}  # adjust per your rules
+            for card in hand:
+                if card.suit == self.pending_question_suit and card.rank in answer_ranks:
+                    legal.append(card.str)
+
+            if not legal:
+                legal = ['draw']
+
+        # Case 3: Normal turn → match suit/rank or play Joker
+        else:
+            for card in hand:
+                if (card.suit == target_suit or
+                    card.rank == target_rank or
+                    card.rank == 'JOK' or
+                    target_rank == 'JOK'):
+
+                    legal.append(card.str)
+
+            if not legal:
+                legal = ['draw']
+
+        # ─────────────── Add this block here ───────────────
+        # (initialize on first call)
+        self.last_logged_player = getattr(self, 'last_logged_player', -1)
+        self.last_logged_state_hash = getattr(self, 'last_logged_state_hash', '')
+
+        # unique key for current state
+        state_key = f"{player_id}-{self.pending_penalty}-{self.pending_question_suit}-{self.target.str if self.target else 'None'}"
+
+        # Only print if player or state changed
+        if state_key != self.last_logged_state_hash or player_id != self.last_logged_player:
+            if(len(hand) < 10):
+                print(f"[LEGAL] Player {player_id} | hand: {cards2list(hand)} cards | top: {self.target.str if self.target else 'None'}")
+                print(f"[LEGAL] pending_penalty={self.pending_penalty}, question_suit={self.pending_question_suit}")
+                print(f"[LEGAL] Final legal actions: {legal}")
+
+            # remember for next time
+            self.last_logged_player = player_id
+            self.last_logged_state_hash = state_key
+
+        # ─────────────── always return the list ───────────────
         return legal
     
     def get_state(self, players, player_id):
@@ -204,14 +230,35 @@ class KadiRound:
     def replace_deck(self):
         ''' Add cards have been played to deck
         '''
-        self.dealer.deck.extend(self.played_cards)
+
+        if not self.played_cards:
+            # print("[RESHUFFLE] No played cards available → cannot reshuffle")
+            return
+
+        if len(self.played_cards) == 1:
+            # print("[RESHUFFLE] Only top card left — cannot reshuffle")
+            return
+
+        # print(f"[RESHUFFLE] Deck empty. Moving {len(self.played_cards)-1} cards back to deck (keeping top)")
+        
+        # Keep the current top card
+        current_top = self.played_cards[-1]
+
+        # Move all other played cards to deck
+        self.dealer.deck.extend(self.played_cards[:-1])
         self.dealer.shuffle()
-        self.played_cards = []
+
+        # Restore only the top card
+        self.played_cards = [current_top]
+
+        # print(f"[RESHUFFLE] New deck size: {len(self.dealer.deck)} | top remains: {current_top.str}")
 
     def _perform_draw_action(self, players):
         # replace deck if there is no card in draw pile
         if not self.dealer.deck:
             self.replace_deck()
+            # if not self.dealer.deck:
+                # print("[DRAW] Still no cards after reshuffle — game may be stuck")
             #self.is_over = True
             #self.winner = UnoJudger.judge_winner(players)
             #return None

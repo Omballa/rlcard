@@ -1,6 +1,6 @@
-from rlcard.games.uno.dealer import UnoDealer as Dealer
-from rlcard.games.uno.judger import UnoJudger as Judger
-from rlcard.games.uno.player import UnoPlayer as Player
-from rlcard.games.uno.round import UnoRound as Round
-from rlcard.games.uno.game import UnoGame as Game
+from rlcard.games.kadi.dealer import KadiDealer as Dealer
+from rlcard.games.kadi.judger import KadiJudger as Judger
+from rlcard.games.kadi.player import KadiPlayer as Player
+from rlcard.games.kadi.round import KadiRound as Round
+from rlcard.games.kadi.game import KadiGame as Game
 
