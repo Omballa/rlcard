@@ -70,8 +70,13 @@ class KadiRound:
             player (object): object of UnoPlayer
             action (str): string of legal action
         '''
+
+        
         if action == 'draw':
             self._perform_draw_action(players)
+            return None
+        
+        if action == "pass":
             return None
         
         player = players[self.current_player]
@@ -204,7 +209,7 @@ class KadiRound:
             self.last_logged_player = player_id
             self.last_logged_state_hash = state_key
 
-        # ─────────────── always return the list ───────────────
+        # ─────────────── always return the list ───────────────z
         return legal
     
     def get_state(self, players, player_id):

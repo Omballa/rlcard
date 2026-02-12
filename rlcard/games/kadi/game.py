@@ -144,9 +144,9 @@ class KadiGame:
         ''' Return the number of applicable actions
 
         Returns:
-            (int): The number of actions. There are 61 actions
+            (int): The number of actions. There are 55 actions
         '''
-        return 54
+        return 55
 
     def get_player_id(self):
         ''' Return the current player's id
