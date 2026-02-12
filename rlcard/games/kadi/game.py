@@ -49,7 +49,7 @@ class KadiGame:
 
         # flip and perfrom top card
         top_card = self.round.flip_top_card()
-        self.round.perform_top_card(self.players, top_card)
+        # self.round.perform_top_card(self.players, top_card)
 
         # Save the hisory for stepping back to the last state.
         self.history = []
@@ -144,9 +144,9 @@ class KadiGame:
         ''' Return the number of applicable actions
 
         Returns:
-            (int): The number of actions. There are 55 actions
+            (int): The number of actions. There are 56 actions
         '''
-        return 55
+        return 56
 
     def get_player_id(self):
         ''' Return the current player's id

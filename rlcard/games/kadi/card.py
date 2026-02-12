@@ -33,8 +33,7 @@ class KadiCard:
         Returns:
             str: e.g. 'h-A', 'd-K', 'JOK', 'draw'
         """
-        if self.rank == 'JOK':
-            return 'JOK'
+        
         return f"{self.suit}-{self.rank}"
 
 

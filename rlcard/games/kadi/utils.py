@@ -46,9 +46,9 @@ def init_deck():
         for rank in ranks:
             deck.append(Card(suit, rank))
 
-    # Add two identical Jokers (no suit)
-    deck.append(Card(None, 'JOK'))
-    deck.append(Card(None, 'JOK'))
+    # Add two identical Jokers 
+    deck.append(Card('h', 'JOK'))
+    deck.append(Card('s', 'JOK'))
 
     return deck
 
