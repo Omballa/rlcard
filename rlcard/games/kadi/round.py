@@ -24,6 +24,8 @@ class KadiRound:
         self.pending_penalty = 0            # Accumulates draw cards from chain (2/3/Joker)
         self.pending_question_suit = None   # If Question (Q/8) active, forces same-suit Answer
         self.chain_counter = 1
+        self.wild_played = False
+        self.requested_suit = None
 
     def flip_top_card(self):
         ''' Flip the top card of the card pile
@@ -80,13 +82,25 @@ class KadiRound:
         
         if action == 'draw':
             self._perform_draw_action(players)
+            self.chain_counter = 1
             print("draw")
             return None
         
         if action == "pass":
             self.previous_player = self.current_player
+            self.chain_counter = 1
             self.current_player = (self.current_player + self.direction) % self.num_players
             print("pass")
+            return None
+        
+        if self.wild_played:
+            suit = action.split('-')[0]
+            self.requested_suit = suit
+            print(f"Card after A. The suit is {suit}")
+            self.chain_counter = 1
+            self.previous_player = self.current_player
+            self.current_player = (self.current_player + self.direction) % self.num_players
+            self.wild_played = False
             return None
 
     
@@ -121,6 +135,7 @@ class KadiRound:
         for c in player.hand:
             if(c.rank == card.rank):
                 possible_chains += 1
+                
         print(f"Possible chains: {possible_chains}")
         print(f"Chain counter: {self.chain_counter}")
         
@@ -145,7 +160,7 @@ class KadiRound:
 
         if rank in ['2', '3', 'JOK']:
             penalty = {'2': 2, '3': 3, 'JOK': 5}.get(rank, 0)
-            self.pending_penalty += (penalty * self.chain_counter)
+            self.pending_penalty += penalty
             self.previous_player = self.current_player
             self.current_player = next_idx  # Stay on next for possible counter
 
@@ -167,16 +182,23 @@ class KadiRound:
 
         elif rank == 'A':
             # Ace: player declares new suit (handled in action? or sub-action)
+            self.wild_played = True
             # For simplicity: assume action includes suit, or keep current
-            self.previous_player = self.current_player
-            self.current_player = next_idx
+            # self.previous_player = self.current_player
+            # self.current_player = next_idx
 
         else:
             # Normal number card
             self.previous_player = self.current_player
             self.current_player = next_idx
 
-        self.chain_counter = 1
+        if (self.current_player != self.previous_player):
+            self.chain_counter = 1
+
+        print(f"Wild played: {self.wild_played} and Requested suit: {self.requested_suit} and card suit: {card.suit}")
+        if(self.wild_played == False and self.requested_suit == card.suit):
+            self.requested_suit = None
+
 
     def _apply_chain_card_effect(self, card):
         """Apply special card effects; may allow chaining (re-call proceed_round)."""
@@ -189,9 +211,14 @@ class KadiRound:
         elif rank in ['Q', '8']:
             self.pending_question_suit = card.suit
             # self.current_player = next_idx  # Next must answer same suit
+        elif rank == "A":
+            self.wild_played = True
+
 
         self.previous_player = self.current_player
         self.chain_counter += 1
+        if(self.wild_played == False and self.requested_suit == card.suit):
+            self.requested_suit = None
 
 
     def get_legal_actions(self, players, player_id):
@@ -204,14 +231,20 @@ class KadiRound:
 
         target_suit = self.target.suit if self.target else None
         target_rank = self.target.rank if self.target else None
+
         
         # Case 1: There is an active penalty → can only counter or draw
         if self.pending_penalty > 0:
+            
             for card in hand:
-                if card.rank in ['2', '3', 'JOK'] and card.rank == target_rank:
+                target_color = 'red' if target_suit in ['h','d'] else 'black'
+                card_color = 'red' if card.suit in ['h','d'] else 'black'
+
+                if ((card.rank in ['2', '3'] and card.rank == target_rank) or 
+                   (card.rank in ['2', '3'] and card.suit == target_suit) or
+                   (card.rank == 'JOK' and target_color == card_color)):
                     legal.append(card.str)
                     
-
             if not legal:
                 legal = ['draw']
 
@@ -228,22 +261,34 @@ class KadiRound:
                 legal = ['draw']
             else:
                 legal.append("draw")
+        
+        # Case 3: A has been played
+        elif self.wild_played:
+            legal = [ card.str for card in hand]
+        
+        elif self.requested_suit:
+            legal = [ card.str for card in hand if card.suit == self.requested_suit]
 
-        # Case 3: Normal turn → match suit/rank or play Joker
+            if not legal:
+                legal = ["draw"]
+
+        # Case 4: Normal turn → match suit/rank or play Joker
         else:
             for card in hand:
                 target_color = 'red' if target_suit in ['h','d'] else 'black'
                 card_color = 'red' if card.suit in ['h','d'] else 'black'
+                
 
-                if self.chain_counter < 2:
+                if self.chain_counter == 1:
                     if (card.suit == target_suit or
                         card.rank == target_rank or
+                        card.rank == "A" or
                         (card.rank == 'JOK' and target_color == card_color) or
                         (target_rank == 'JOK' and target_color == card_color)):
 
                         
                         legal.append(card.str)
-                else:
+                elif self.chain_counter > 1:
                     if card.rank == target_rank:
                         legal.append(card.str)
 
@@ -265,7 +310,7 @@ class KadiRound:
         if state_key != self.last_logged_state_hash or player_id != self.last_logged_player:
             
             print(f"[LEGAL] Player {player_id} | hand: {cards2list(hand)} cards | top: {self.target.str if self.target else 'None'}")
-            print(f"[LEGAL] pending_penalty={self.pending_penalty}, question_suit={self.pending_question_suit}")
+            print(f"[LEGAL] pending_penalty={self.pending_penalty}, question_suit={self.pending_question_suit}, requested_suit={self.requested_suit}")
             print(f"[LEGAL] Final legal actions: {legal}")
 
             # remember for next time
@@ -322,6 +367,7 @@ class KadiRound:
         # print(f"[RESHUFFLE] New deck size: {len(self.dealer.deck)} | top remains: {current_top.str}")
 
     def _perform_draw_action(self, players):
+
         # replace deck if there is no card in draw pile
         if not self.dealer.deck:
             self.replace_deck()
