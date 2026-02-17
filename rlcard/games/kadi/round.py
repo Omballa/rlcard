@@ -79,19 +79,22 @@ class KadiRound:
             player (object): object of UnoPlayer
             action (str): string of legal action
         '''
+
+        if self.is_over:
+            return
         
         if action == 'draw':
             self._perform_draw_action(players)
             self.chain_counter = 1
             print("draw")
-            return None
+            return
         
         if action == "pass":
             self.previous_player = self.current_player
             self.chain_counter = 1
             self.current_player = (self.current_player + self.direction) % self.num_players
             print("pass")
-            return None
+            return
         
         if self.wild_played:
             suit = action.split('-')[0]
@@ -101,7 +104,7 @@ class KadiRound:
             self.previous_player = self.current_player
             self.current_player = (self.current_player + self.direction) % self.num_players
             self.wild_played = False
-            return None
+            return
 
     
         print(f"ACTION: {action}")
@@ -116,15 +119,9 @@ class KadiRound:
         self.target = card
 
         # Check win (after full chain/turn)
-        if len(player.hand) == 0:
-            if not player.niko_kadi_declared:  # Must have announced previous turn
-                # Optional: check final card was Answer (4-7,9,10,A) — variant-dependent
-                self.is_over = True
-                self.winner = [self.current_player]
-            else:
-                # Penalty for invalid win attempt (e.g. draw 2–4 cards)
-                self.dealer.deal_cards(player, 4, self)
-                player.niko_kadi_declared = False
+        game_over = self.check_winner(player, card)
+        if game_over:
+            return
 
         # # Reset pending if countered
         # self.pending_penalty = 0
@@ -144,6 +141,20 @@ class KadiRound:
         else:
             self._apply_card_effect(players, card)
 
+    def check_winner(self, player, card):
+        if len(player.hand) == 0:
+            if not player.niko_kadi_declared and card.rank in ['4','5','6','7','9','10']:  # Must have announced previous turn
+                # Optional: check final card was Answer (4-7,9,10,A) — variant-dependent
+                self.is_over = True
+                self.winner = [self.current_player]
+                return True
+            else:
+                # Penalty for invalid win attempt (e.g. draw 2–4 cards)
+                self.dealer.deal_cards(player, 1, self)
+                player.niko_kadi_declared = False
+                return False
+        
+        return False
     
     def _find_and_remove_card(self, player, action_str):
         """Find card in hand by str ('h-A', 'JOK') and remove it."""
@@ -232,6 +243,9 @@ class KadiRound:
         target_suit = self.target.suit if self.target else None
         target_rank = self.target.rank if self.target else None
 
+        if self.is_over:
+            return []
+
         
         # Case 1: There is an active penalty → can only counter or draw
         if self.pending_penalty > 0:
@@ -247,6 +261,8 @@ class KadiRound:
                     
             if not legal:
                 legal = ['draw']
+            else:
+                legal.append("draw")
 
         # Case 2: Question is pending → must play same-suit Answer or draw
         elif self.pending_question_suit:
@@ -265,6 +281,9 @@ class KadiRound:
         # Case 3: A has been played
         elif self.wild_played:
             legal = [ card.str for card in hand]
+    
+            if not legal:
+                legal = ["draw"]
         
         elif self.requested_suit:
             legal = [ card.str for card in hand if card.suit == self.requested_suit]

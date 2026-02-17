@@ -69,6 +69,7 @@ class KadiGame:
             (dict): Next player's state
             (int): Next player's id
         """
+        
 
         if self.allow_step_back:
             # First snapshot the current state
