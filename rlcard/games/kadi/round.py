@@ -86,20 +86,20 @@ class KadiRound:
         if action == 'draw':
             self._perform_draw_action(players)
             self.chain_counter = 1
-            print("draw")
+            # print("draw")
             return
         
         if action == "pass":
             self.previous_player = self.current_player
             self.chain_counter = 1
             self.current_player = (self.current_player + self.direction) % self.num_players
-            print("pass")
+            # print("pass")
             return
         
         if self.wild_played:
             suit = action.split('-')[0]
             self.requested_suit = suit
-            print(f"Card after A. The suit is {suit}")
+            # print(f"Card after A. The suit is {suit}")
             self.chain_counter = 1
             self.previous_player = self.current_player
             self.current_player = (self.current_player + self.direction) % self.num_players
@@ -107,7 +107,7 @@ class KadiRound:
             return
 
     
-        print(f"ACTION: {action}")
+        # print(f"ACTION: {action}")
 
         player = players[self.current_player]
         card = self._find_and_remove_card(player, action)
@@ -133,8 +133,8 @@ class KadiRound:
             if(c.rank == card.rank):
                 possible_chains += 1
                 
-        print(f"Possible chains: {possible_chains}")
-        print(f"Chain counter: {self.chain_counter}")
+        # print(f"Possible chains: {possible_chains}")
+        # print(f"Chain counter: {self.chain_counter}")
         
         if possible_chains > 0:
             self._apply_chain_card_effect(card)
@@ -206,7 +206,7 @@ class KadiRound:
         if (self.current_player != self.previous_player):
             self.chain_counter = 1
 
-        print(f"Wild played: {self.wild_played} and Requested suit: {self.requested_suit} and card suit: {card.suit}")
+        # print(f"Wild played: {self.wild_played} and Requested suit: {self.requested_suit} and card suit: {card.suit}")
         if(self.wild_played == False and self.requested_suit == card.suit):
             self.requested_suit = None
 
@@ -325,18 +325,18 @@ class KadiRound:
         # unique key for current state
         state_key = f"{player_id}-{self.pending_penalty}-{self.pending_question_suit}-{self.target.str if self.target else 'None'}"
 
-        # Only print if player or state changed
-        if state_key != self.last_logged_state_hash or player_id != self.last_logged_player:
+        # # Only print if player or state changed
+        # if state_key != self.last_logged_state_hash or player_id != self.last_logged_player:
             
-            print(f"[LEGAL] Player {player_id} | hand: {cards2list(hand)} cards | top: {self.target.str if self.target else 'None'}")
-            print(f"[LEGAL] pending_penalty={self.pending_penalty}, question_suit={self.pending_question_suit}, requested_suit={self.requested_suit}")
-            print(f"[LEGAL] Final legal actions: {legal}")
+        #     print(f"[LEGAL] Player {player_id} | hand: {cards2list(hand)} cards | top: {self.target.str if self.target else 'None'}")
+        #     print(f"[LEGAL] pending_penalty={self.pending_penalty}, question_suit={self.pending_question_suit}, requested_suit={self.requested_suit}")
+        #     print(f"[LEGAL] Final legal actions: {legal}")
 
-            # remember for next time
-            self.last_logged_player = player_id
-            self.last_logged_state_hash = state_key
+        #     # remember for next time
+        #     self.last_logged_player = player_id
+        #     self.last_logged_state_hash = state_key
 
-        # ─────────────── always return the list ───────────────z
+        # # ─────────────── always return the list ───────────────z
         return legal
     
     def get_state(self, players, player_id):
