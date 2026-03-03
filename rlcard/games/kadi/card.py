@@ -85,10 +85,10 @@ class KadiCard:
                 
                 # Special handling: always show suit color for these?
                 if show_suit_for_special or rank in ['2','3','4','5','6','7','9','10','A']:
-                    display = colored(name, color)
+                    display = colored(f"{name}-{suit}", color)
                 else:
                     # For J/Q/K/8/JOK — neutral or bold without suit color
-                    display = colored(name, 'white', attrs=['bold'])
+                    display = colored(f"{name}-{suit}", 'white', attrs=['bold'])
 
             print(display, end='')
             if i < len(cards) - 1:

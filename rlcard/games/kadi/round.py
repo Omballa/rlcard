@@ -254,9 +254,10 @@ class KadiRound:
                 target_color = 'red' if target_suit in ['h','d'] else 'black'
                 card_color = 'red' if card.suit in ['h','d'] else 'black'
 
-                if ((card.rank in ['2', '3'] and card.rank == target_rank) or 
-                   (card.rank in ['2', '3'] and card.suit == target_suit) or
-                   (card.rank == 'JOK' and target_color == card_color)):
+                if ((card.rank in ['2', '3', 'JOK'] and card.rank == target_rank) or 
+                   (card.rank in ['2', '3', 'JOK'] and card.suit == target_suit) or
+                   (card.rank == 'JOK' and target_color == card_color and card.rank in ['2', '3', 'JOK']) or
+                   (target_rank == 'JOK' and target_color == card_color and card.rank in ['2', '3', 'JOK'])):
                     legal.append(card.str)
                     
             if not legal:
@@ -356,6 +357,7 @@ class KadiRound:
         state['pending_penalty'] = self.pending_penalty
         state['pending_question_suit'] = self.pending_question_suit
         state['niko_kadi_status'] = [p.niko_kadi_declared for p in players]
+        state['opponent_hand_size'] = [len(p.hand) for p in players if p.player_id != player_id]
         
         return state
 

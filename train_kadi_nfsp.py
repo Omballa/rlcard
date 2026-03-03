@@ -6,7 +6,7 @@ import argparse
 import torch
 
 import rlcard
-from rlcard.agents import RandomAgent
+from rlcard.agents import RandomAgent, NFSPAgent
 from rlcard.utils import (
     get_device,
     set_seed,
@@ -63,7 +63,8 @@ def train(args):
             )
     agents = [agent]
     for _ in range(1, env.num_players):
-        agents.append(RandomAgent(num_actions=env.num_actions))
+        strong_agent = NFSPAgent.from_checkpoint(checkpoint=torch.load("experiments/kadi_nfsp_result/checkpoint_nfsp.pt"))
+        agents.append(strong_agent)
     env.set_agents(agents)
 
     # Start training
@@ -147,17 +148,17 @@ if __name__ == '__main__':
     parser.add_argument(
         '--num_episodes',
         type=int,
-        default=5000,
+        default=50000,
     )
     parser.add_argument(
         '--num_eval_games',
         type=int,
-        default=2000,
+        default=300,
     )
     parser.add_argument(
         '--evaluate_every',
         type=int,
-        default=100,
+        default=1000,
     )
     parser.add_argument(
         '--log_dir',
@@ -174,7 +175,7 @@ if __name__ == '__main__':
     parser.add_argument(
         "--save_every",
         type=int,
-        default=-1)
+        default=5000)
 
     args = parser.parse_args()
 
