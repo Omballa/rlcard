@@ -50,7 +50,7 @@ def train(args):
     elif args.algorithm == 'nfsp':
         from rlcard.agents import NFSPAgent
         if args.load_checkpoint_path != "":
-            agent = NFSPAgent.from_checkpoint(checkpoint=torch.load(args.load_checkpoint_path))
+            agent = NFSPAgent.from_checkpoint(checkpoint=torch.load(args.load_checkpoint_path, weights_only=False))
         else:
             agent = NFSPAgent(
                 num_actions=env.num_actions,
@@ -63,7 +63,7 @@ def train(args):
             )
     agents = [agent]
     for _ in range(1, env.num_players):
-        strong_agent = NFSPAgent.from_checkpoint(checkpoint=torch.load("experiments/kadi_nfsp_result/checkpoint_nfsp.pt"))
+        strong_agent = NFSPAgent.from_checkpoint(checkpoint=torch.load("experiments/kadi_nfsp_result/checkpoint_nfsp.pt", weights_only=False))
         agents.append(strong_agent)
     env.set_agents(agents)
 
