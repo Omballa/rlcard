@@ -95,7 +95,7 @@ class KadiPlayer:
         Returns:
             bool: True if player has an answer card
         """
-        answer_ranks = ['4', '5', '6', '7', '9', 'T', 'A']
+        answer_ranks = ['4', '5', '6', '7', '9', '10', 'A']
         
         for card in self.hand:
             if card.rank in answer_ranks:
@@ -111,7 +111,7 @@ class KadiPlayer:
             list: Cards that contribute to winning (answer cards and questions with answer pairs)
         """
         # Answer cards: 4, 5, 6, 7, 9, 10, A
-        answer_ranks = ['4', '5', '6', '7', '9', 'T', 'A']
+        answer_ranks = ['4', '5', '6', '7', '9', '10', 'A']
         question_ranks = ['Q', '8']
         
         winning_cards = []

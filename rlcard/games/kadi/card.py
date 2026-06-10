@@ -16,7 +16,7 @@ class KadiCard:
         
         Args:
             suit (str): Card suit (H, D, C, S)
-            rank (str): Card rank (A, 2-9, T (10), J, Q, K)
+            rank (str): Card rank (A, 2-9, 10, J, Q, K)
         """
         self.suit = suit
         self.rank = rank

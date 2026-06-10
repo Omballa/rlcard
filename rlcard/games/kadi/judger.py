@@ -70,7 +70,7 @@ class KadiJudger:
                 if card.rank in ['Q', '8']:
                     # Check if player has answer card of same suit
                     has_answer = any(
-                        c.rank in ['4', '5', '6', '7', '9', 'T', 'A'] and c.suit == card.suit
+                        c.rank in ['4', '5', '6', '7', '9', '10', 'A'] and c.suit == card.suit
                         for c in player.hand
                     )
                     if has_answer:
@@ -142,7 +142,7 @@ class KadiJudger:
             list: Indices of valid answer cards in player's hand
         """
         valid_answers = []
-        answer_ranks = ['4', '5', '6', '7', '9', 'T', 'A']
+        answer_ranks = ['4', '5', '6', '7', '9', '10', 'A']
         
         for i, card in enumerate(player.hand):
             if card.rank in answer_ranks and card.suit == question_card.suit:

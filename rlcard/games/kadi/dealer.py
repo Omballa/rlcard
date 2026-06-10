@@ -29,7 +29,7 @@ class KadiDealer:
         self.deck = []
         
         suits = ['H', 'D', 'C', 'S']
-        ranks = ['A', '2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K']
+        ranks = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']
         
         # Create standard 52 cards
         for suit in suits:
