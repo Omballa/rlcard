@@ -34,7 +34,7 @@ class KadiCard:
     
     def __str__(self):
         """Get string representation of card"""
-        return f"{self.rank}{self.suit}"
+        return f"{self.suit}{self.rank}"
     
     def __repr__(self):
         return self.__str__()
