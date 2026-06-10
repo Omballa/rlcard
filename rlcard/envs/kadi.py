@@ -107,5 +107,7 @@ class KadiEnv(Env):
         info['direction'] = self.game.direction
         info['declared_suit'] = self.game.declared_suit
         info['current_penalty'] = self.game.current_penalty
+        info['deck'] = self.game.dealer.deck
+        info['discard_pile'] = self.game.dealer.discard_pile
         
         return info
