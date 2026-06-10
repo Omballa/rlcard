@@ -99,6 +99,7 @@ class KadiEnv(Env):
                 'hand_size': len(player.hand),
                 'status': player.status,
                 'kadi_announced': player.kadi_announced,
+                'legal_moves': self.game.get_legal_actions() if player.player_id == self.game.current_player else [],
             }
             info[f'player_{player.player_id}'] = player_info
         

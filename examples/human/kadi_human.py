@@ -27,6 +27,7 @@ def main():
             
             state = env.get_state(0)
             legal = env._get_legal_actions()
+            print(env.get_perfect_information())
             print_state(state)
 
             # Show legal choices
