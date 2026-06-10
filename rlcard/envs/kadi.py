@@ -4,7 +4,7 @@ Kadi environment for RLCard
 
 import numpy as np
 from rlcard.envs.env import Env
-from rlcard.games.kadi import KadiGame
+from rlcard.games.kadi import KadiGame, KadiCard
 
 
 class KadiEnv(Env):
@@ -123,14 +123,14 @@ class KadiEnv(Env):
         # This method can be implemented to allow setting the game state from perfect information
         for player in self.game.players:
             player_info = info.get(f'player_{player.player_id}', {})
-            player.hand = [self.game.cards[card_index] for card_index in player_info.get('hand', [])]
+            player.hand = [KadiCard(card_index[:1],card_index[1:]) for card_index in player_info.get('hand', [])]
             player.status = player_info.get('status', 'active')
             player.kadi_announced = player_info.get('kadi_announced', False)
         
         self.game.dealer.discard_pile = info.get('discard_pile', [])
-        self.game.dealer.deck = info.get('deck', [])
+        self.game.dealer.deck = [KadiCard(card_index[:1],card_index[1:]) for card_index in info.get('deck', [])]
         self.game.direction = info.get('direction', 1)
         self.game.declared_suit = info.get('declared_suit', None)
         self.game.current_penalty = info.get('current_penalty', 0)
         self.game.current_player = info.get('current_player', 0)
-        self.game.dealer.top_card = self.game.cards[info.get('top_card')] if info.get('top_card') is not None else None
+        self.game.dealer.top_card = KadiCard(info.get('top_card')[:1], info.get('top_card')[1:]) if info.get('top_card') is not None else None
