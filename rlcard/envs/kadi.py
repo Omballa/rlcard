@@ -127,7 +127,7 @@ class KadiEnv(Env):
             player.status = player_info.get('status', 'active')
             player.kadi_announced = player_info.get('kadi_announced', False)
         
-        self.game.dealer.discard_pile = info.get('discard_pile', [])
+        self.game.dealer.discard_pile = KadiCard(info.get('discard_pile')[:1], info.get('discard_pile')[1:]) if info.get('discard_pile') is not None else []
         self.game.dealer.deck = [KadiCard(card_index[:1],card_index[1:]) for card_index in info.get('deck', [])]
         self.game.direction = info.get('direction', 1)
         self.game.declared_suit = info.get('declared_suit', None)
