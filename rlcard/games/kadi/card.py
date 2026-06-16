@@ -59,7 +59,7 @@ class KadiCard:
             return 'kickback'
         elif self.rank in ['2', '3']:
             return 'penalty'
-        elif self.rank in ['4', '5', '6', '7', '9', 'A']:
+        elif self.rank in ['4', '5', '6', '7', '9', '10', 'A']:
             return 'answer'
         return 'normal'
     

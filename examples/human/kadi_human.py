@@ -35,6 +35,10 @@ def main():
             for i, a in enumerate(legal):
                 if a == -1:
                     print(f"  [{i}] DRAW")
+                elif a == -2:
+                    print(f"  [{i}] PASS")
+                elif a in ['h','d','c','s']:
+                    print(f" [{i}] {a}")
                 else:
                     # protect against stale indices
                     card_str = state['hand'][a] if a < len(state['hand']) and a >= 0 else str(a)
@@ -59,7 +63,18 @@ def main():
             # get current state for the opponent so we can show the played card
             state_before = env.get_state(player)
             legal = env._get_legal_actions()
+            print("AI legal actions")
+            for l in legal:
+                if l == -1:
+                    print("DRAW")
+                elif l == -2:
+                    print("PASS")
+                elif l in [-3,-4,-5,-6]:
+                    print(f" {l}")
+                else:
+                    print(str(state_before['hand'][l]))
             raw_action = int(np.random.choice(legal))
+            print(f"AI plays card index {raw_action}")
             state, player = env.step(raw_action, raw_action=True)
         
 

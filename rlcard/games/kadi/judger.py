@@ -17,7 +17,7 @@ class KadiJudger:
         """
         self.np_random = np_random
     
-    def get_legal_actions(self, player, top_card, declared_suit=None, current_penalty=0):
+    def get_legal_actions(self, player, top_card, declared_suit=None, current_penalty=0, previous_player=None):
         """
         Get legal actions for a player
         
@@ -40,7 +40,7 @@ class KadiJudger:
         if current_penalty > 0:
             # Can play penalty cards to forward the penalty
             for i, card in enumerate(player.hand):
-                if card.rank in ['2', '3']:
+                if (card.rank == top_rank or card.suit == top_suit) and card.rank in ['2', '3']:
                     legal_actions.append(i)
             
             # Can play Ace to escape penalty (continues with its suit)
@@ -53,38 +53,57 @@ class KadiJudger:
             #     legal_actions.append(-1)  # Special code for "draw"
             
             # Always append draw as a legal action. Player can choose to draw even if they have legal plays (strategic choice).
-            legal_actions.append(-1)  # Special code for "draw"
+            if previous_player == player.player_id:
+                legal_actions.append(-2)
+            else:
+                legal_actions.append(-1)  # Special code for "draw"
             
             return legal_actions
         
-        # Normal play: match suit or rank
-        for i, card in enumerate(player.hand):
-            if card.rank == top_rank or card.suit == suit_to_match:
-                legal_actions.append(i)
+        if previous_player is not None and previous_player == player.player_id:
+            for i, card in enumerate(player.hand):
+                if top_rank not in ['K','J','8','Q'] and card.rank == top_rank:
+                    legal_actions.append(i)
+                elif top_rank in ['Q','8'] and card.suit == top_suit and top_rank in ["4","5","6","7","9","10"]:
+                    legal_actions.append(i)
+                elif card.suit == declared_suit:
+                    legal_actions.append(i)
+
+
+            legal_actions.append(-2)  # Special code for "pass" if chaining moves
+        else:
+            # Normal play: match suit or rank
+            for i, card in enumerate(player.hand):
+                if card.rank == top_rank or card.suit == suit_to_match or card.suit == declared_suit:
+                    legal_actions.append(i)
+                elif card.rank == "A":
+                    legal_actions.append(i)
+
+            legal_actions.append(-1)  # Special code for "draw"
         
-        # If playing a Question card, must have an answer card available
-        if top_rank in ['Q', '8']:
-            filtered_actions = []
-            for action in legal_actions:
-                card = player.hand[action]
-                if card.rank in ['Q', '8']:
-                    # Check if player has answer card of same suit
-                    has_answer = any(
-                        c.rank in ['4', '5', '6', '7', '9', '10', 'A'] and c.suit == card.suit
-                        for c in player.hand
-                    )
-                    if has_answer:
-                        filtered_actions.append(action)
-                else:
-                    filtered_actions.append(action)
-            legal_actions = filtered_actions
+        # # If playing a Question card, must have an answer card available
+        # if top_rank in ['Q', '8']:
+        #     filtered_actions = []
+        #     for action in legal_actions:
+        #         card = player.hand[action]
+        #         if card.rank in ['Q', '8']:
+        #             # Check if player has answer card of same suit
+        #             has_answer = any(
+        #                 c.rank in ['4', '5', '6', '7', '9', '10', 'A'] and c.suit == card.suit
+        #                 for c in player.hand
+        #             )
+        #             if has_answer:
+        #                 filtered_actions.append(action)
+        #         else:
+        #             filtered_actions.append(action)
+        #     legal_actions = filtered_actions
         
         # # If no legal play, player must draw
         # if not legal_actions:
         #     legal_actions.append(-1)  # Special code for "draw"
 
         # Always append draw as a legal action. Player can choose to draw even if they have legal plays (strategic choice).
-        legal_actions.append(-1)  # Special code for "draw"
+        
         
         return legal_actions
     

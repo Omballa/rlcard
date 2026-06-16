@@ -80,6 +80,8 @@ class KadiGame:
         self.last_played_card = None
         self.game_is_over = False  # Renamed from is_over to avoid method conflict
         self.winner = None
+        self.previous_player = None
+        self.waiting_for_suit_call = False
         
         # Track if players have announced "Niko Kadi"
         for player in self.players:
@@ -104,18 +106,22 @@ class KadiGame:
         if self.allow_step_back:
             self._save_history()
         
+
         # Handle phase transitions
-        if action == -1 or action == 'draw':
+        if action == -1:
             self._handle_draw()
+        elif action == -2:
+            # Handle pass action (only allowed if chaining moves)
+            self.previous_player = self.current_player
+            self._next_player()
         else:
             self._handle_play(action)
-        
+
+
         # Check win condition
         if self.game_is_over:
             return self.get_state(self.current_player), self.current_player
         
-        # Move to next player
-        self._next_player()
         
         return self.get_state(self.current_player), self.current_player
     
@@ -152,6 +158,10 @@ class KadiGame:
                 self.players[self.current_player].add_card(card)
                 # Reset declared suit after drawing
                 self.declared_suit = None
+            
+        # Move to next player
+        self.previous_player = self.current_player
+        self._next_player()
     
     def _handle_play(self, action):
         """
@@ -161,64 +171,98 @@ class KadiGame:
             action (int): Index of card to play
         """
         player = self.players[self.current_player]
-        card = player.hand[action]
-        
-        # Verify play is legal
-        top_card = self.dealer.get_top_card()
-        legal_actions = self.judger.get_legal_actions(
-            player, top_card, self.declared_suit, self.current_penalty
-        )
-        
-        if action not in legal_actions:
-            # Invalid play - draw penalty card
-            self._handle_draw()
-            return
-        
-        # Remove card from hand
-        player.remove_card(card)
-        self.dealer.add_to_discard_pile(card)
-        self.last_played_card = card
-        
-        # Handle special card effects
-        card_type = card.get_type()
-        
-        if card_type == 'jump':
-            self._handle_jump()
-        elif card_type == 'kickback':
-            self._handle_kickback()
-        elif card_type == 'question':
-            self._handle_question()
-        elif card_type == 'penalty':
-            self._handle_penalty(card)
-        elif card_type == 'answer':
-            if card.rank == 'A':
-                self._handle_ace()
+
+        if self.waiting_for_suit_call:
+            if action == -3:
+                self.declared_suit = 'H'
+            elif action == -4:
+                self.declared_suit = 'D'
+            elif action == -5:
+                self.declared_suit = 'C'
+            elif action == -6:
+                self.declared_suit = 'S'
             else:
-                self.current_penalty = 0
-                self.declared_suit = None
-        
-        # Check if player can win next round
-        if player.get_hand_size() == 0:
-            self.game_is_over = True
-            player.status = 'cardless'
-            if player.kadi_announced:
-                self.winner = [player.player_id]
-            else:
-                # Player won but didn't announce Niko Kadi - invalid win
-                self.game_is_over = False
-        elif self.judger.can_win_with_cards(player) and not player.kadi_announced:
-            player.can_win_next_round = True
+                print("Invalid action. Selecting default suit")
+                self.declared_suit = 'H'
+           
+            self.previous_player = self.current_player
+            self._next_player()
+            self.waiting_for_suit_call = False
+
         else:
-            player.can_win_next_round = False
+
+            card = player.hand[action]
+            
+            # Verify play is legal
+            top_card = self.dealer.get_top_card()
+            legal_actions = self.judger.get_legal_actions(
+                player, top_card, self.declared_suit, self.current_penalty, self.previous_player
+            )
+            
+            if action not in legal_actions:
+                # Invalid play - draw penalty card
+                print(f"Invalid action: {action}, Legal actions: {legal_actions}")
+                self._handle_draw()
+                return
+            
+            # Remove card from hand
+            player.remove_card(card)
+            self.dealer.add_to_discard_pile(card)
+            self.last_played_card = card
+            
+            # Handle special card effects
+            card_type = card.get_type()
+            
+            if card_type == 'jump':
+                self._handle_jump()
+            elif card_type == 'kickback':
+                self._handle_kickback()
+            elif card_type == 'question':
+                self._handle_question()
+            elif card_type == 'penalty':
+                self._handle_penalty(card)
+            elif card_type == 'answer':
+                if card.rank == 'A':
+                    self._handle_ace()
+                else:
+                    self.current_penalty = 0
+                    # self.declared_suit = None
+                    self.previous_player = self.current_player
+                    # Check if there is a card in hand with the same rank
+                    if not any(c.rank == card.rank for c in player.hand):
+                        print("Cannot chain. Next player")
+                        self._next_player()
+        
+            # Check if player can win next round
+            if player.get_hand_size() == 0 and card.rank in ["4","5","6","7","9","10"]:
+                self.game_is_over = True
+                player.status = 'cardless'
+                if player.kadi_announced:
+                    self.winner = [player.player_id]
+                else:
+                    # Player won but didn't announce Niko Kadi - invalid win
+                    self.game_is_over = False
+            elif self.judger.can_win_with_cards(player) and not player.kadi_announced:
+                player.can_win_next_round = True
+                player.kadi_announced = True
+            else:
+                player.can_win_next_round = False
+
     
     def _handle_jump(self):
         """Handle Jump card (J) - skip next player"""
         # Next player will be skipped, so we'll move twice
         self._next_player()
+        self._next_player()
     
     def _handle_kickback(self):
         """Handle Kickback card (K) - reverse direction"""
         self.direction *= -1
+        self.previous_player = self.current_player
+        if not any(c.rank == "K" for c in self.players[self.current_player].hand):
+            print("Cannot chain. Next player")
+            self._next_player()
+
     
     def _handle_question(self):
         """Handle Question card (Q or 8) - requires answer card"""
@@ -228,13 +272,28 @@ class KadiGame:
     def _handle_penalty(self, card):
         """Handle Penalty card (2 or 3)"""
         penalty_value = card.get_penalty_value()
+        print(f"Applying penalty of {penalty_value} Current penalty: {self.current_penalty}")
         self.current_penalty += penalty_value
         self.penalty_suit = card.suit
+
+        self.previous_player = self.current_player
+
+        if not any(c.rank == card.rank for c in self.players[self.current_player].hand):
+            print("Cannot chain. Next player")
+            self._next_player()
+
+        # self._next_player()
     
     def _handle_ace(self):
         """Handle Ace card - declare suit"""
-        # This should be handled by RL agent/ action encoding
-        pass
+        if self.current_penalty > 0:
+            self.current_penalty = 0
+            self.declared_suit = None
+            self.waiting_for_suit_call = False
+            self.previous_player = self.current_player
+            self._next_player()
+        else:
+            self.waiting_for_suit_call = True
     
     def _next_player(self):
         """Move to next player"""
@@ -278,10 +337,16 @@ class KadiGame:
         """
         player = self.players[self.current_player]
         top_card = self.dealer.get_top_card()
-        
-        actions = self.judger.get_legal_actions(
-            player, top_card, self.declared_suit, self.current_penalty
-        )
+
+        actions = []
+
+        if self.waiting_for_suit_call:
+            # If waiting for suit call, only legal actions are to declare a suit
+            actions = [-3, -4, -5, -6]
+        else:
+            actions = self.judger.get_legal_actions(
+                player, top_card, self.declared_suit, self.current_penalty, self.previous_player
+            )
         
         return actions
     
