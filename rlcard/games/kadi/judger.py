@@ -62,7 +62,7 @@ class KadiJudger:
         
         if previous_player is not None and previous_player == player.player_id:
             for i, card in enumerate(player.hand):
-                if top_rank not in ['K','J','8','Q'] and card.rank == top_rank:
+                if top_rank not in ['J','8','Q'] and card.rank == top_rank:
                     legal_actions.append(i)
                 elif top_rank in ['Q','8'] and card.suit == top_suit and top_rank in ["4","5","6","7","9","10"]:
                     legal_actions.append(i)

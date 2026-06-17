@@ -156,8 +156,6 @@ class KadiGame:
             card = self.dealer.draw_from_deck()
             if card:
                 self.players[self.current_player].add_card(card)
-                # Reset declared suit after drawing
-                self.declared_suit = None
             
         # Move to next player
         self.previous_player = self.current_player
