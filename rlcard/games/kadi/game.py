@@ -117,7 +117,6 @@ class KadiGame:
         else:
             self._handle_play(action)
 
-
         # Check win condition
         if self.game_is_over:
             return self.get_state(self.current_player), self.current_player
@@ -151,7 +150,6 @@ class KadiGame:
                     self.players[self.current_player].add_card(card)
             # Reset penalty after drawing
             self.current_penalty = 0
-            self.declared_suit = None
         else:
             card = self.dealer.draw_from_deck()
             if card:
@@ -213,18 +211,22 @@ class KadiGame:
             
             if card_type == 'jump':
                 self._handle_jump()
+                self.declared_suit = None
             elif card_type == 'kickback':
                 self._handle_kickback()
+                self.declared_suit = None
             elif card_type == 'question':
                 self._handle_question()
+                self.declared_suit = None
             elif card_type == 'penalty':
                 self._handle_penalty(card)
+                self.declared_suit = None
             elif card_type == 'answer':
                 if card.rank == 'A':
                     self._handle_ace()
                 else:
                     self.current_penalty = 0
-                    # self.declared_suit = None
+                    self.declared_suit = None
                     self.previous_player = self.current_player
                     # Check if there is a card in hand with the same rank
                     if not any(c.rank == card.rank for c in player.hand):
@@ -285,11 +287,11 @@ class KadiGame:
         """Handle Ace card - declare suit"""
         if self.current_penalty > 0:
             self.current_penalty = 0
-            self.declared_suit = None
             self.waiting_for_suit_call = False
             self.previous_player = self.current_player
             self._next_player()
         else:
+            self.declared_suit = None
             self.waiting_for_suit_call = True
     
     def _next_player(self):
