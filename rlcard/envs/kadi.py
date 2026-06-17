@@ -138,3 +138,6 @@ class KadiEnv(Env):
         self.game.dealer.top_card = KadiCard(info.get('top_card')[:1], info.get('top_card')[1:]) if info.get('top_card') is not None else None
         self.game.waiting_for_suit_call = info.get("waiting_for_suit_call", False)
         self.game.previous_player = info.get("previous_player")
+
+    def game_over(self):
+        return self.game.is_over()
