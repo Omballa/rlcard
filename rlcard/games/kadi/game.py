@@ -277,7 +277,6 @@ class KadiGame:
         self.penalty_suit = card.suit
 
         self.previous_player = self.current_player
-
         if not any(c.rank == card.rank for c in self.players[self.current_player].hand):
             print("Cannot chain. Next player")
             self._next_player()
