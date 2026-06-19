@@ -5,6 +5,7 @@ Kadi environment for RLCard
 import numpy as np
 from rlcard.envs.env import Env
 from rlcard.games.kadi import KadiGame, KadiCard
+from rlcard.games.kadi.utils import ACTION_SPACE, ACTION_LIST, index_to_action
 
 
 class KadiEnv(Env):
@@ -31,12 +32,14 @@ class KadiEnv(Env):
     
     def _get_state_space(self):
         """Get state space representation"""
-        # State space includes:
-        # - Hand: up to 54 cards (binary features)
-        # - Top card: 54 options
-        # - Other players' hand sizes: up to num_players-1 integers
-        # - Game state: direction, penalty, etc.
-        return None
+        # Define a fixed observation vector size for function approximation
+        # - Hand one-hot: 52
+        # - Top card one-hot: 52
+        # - Declared suit one-hot: 4
+        # - Direction: 1
+        # - Current penalty: 1
+        # Total obs length = 110
+        return {'obs_shape': (110,), 'obs_type': 'float'}
     
     def _extract_state(self, state):
         """
@@ -48,9 +51,86 @@ class KadiEnv(Env):
         Returns:
             (dict): Processed state with legal actions
         """
-        # Add legal actions to state
-        legal_actions = self._get_legal_actions()
-        state['legal_actions'] = {action: None for action in legal_actions}
+        # Build a fixed-size observation vector and unified action space
+        # Use ACTION_SPACE mapping from games/kadi/jsondata/action_space.json
+        def card_to_global_index(card_str):
+            if card_str is None:
+                return None
+            return ACTION_SPACE.get(card_str)
+
+        # Build obs
+        obs = []
+        # Hand one-hot
+        hand_onehot = [0] * 52
+        for c in state.get('hand', []):
+            gi = card_to_global_index(c)
+            if gi is not None:
+                hand_onehot[gi] = 1
+        obs.extend(hand_onehot)
+
+        # Top card one-hot
+        top_onehot = [0] * 52
+        top_card = state.get('top_card')
+        if top_card is not None:
+            gi = card_to_global_index(top_card)
+            if gi is not None:
+                top_onehot[gi] = 1
+        obs.extend(top_onehot)
+        # Declared suit one-hot
+        suits = ['H', 'D', 'C', 'S']
+        declared = state.get('declared_suit')
+        decl_onehot = [0] * 4
+        if declared in suits:
+            decl_onehot[suits.index(declared)] = 1
+        obs.extend(decl_onehot)
+
+        # Direction
+        obs.append(state.get('direction', 1))
+        # Current penalty
+        obs.append(state.get('current_penalty', 0))
+
+        state['obs'] = np.array(obs, dtype=np.float32)
+
+        # Map legal actions from game (hand indices or negative codes) to global action indices
+        legal = self._get_legal_actions()
+        # special_map handled via ACTION_SPACE entries keyed by their string form (e.g. '-1')
+
+        legal_global = []
+        raw_legal = []
+        # Use the player id from the provided state when mapping legal actions
+        player = state.get('current_player', self.game.current_player)
+        for a in legal:
+            if isinstance(a, int) and a >= 0:
+                # a is index in player's hand
+                try:
+                    card_str = self.game.players[player].hand[a].get_index()
+                except Exception:
+                    # stale index -> skip
+                    continue
+                gi = card_to_global_index(card_str)
+                if gi is not None:
+                    legal_global.append(gi)
+                    raw_legal.append(card_str)
+            else:
+                gi = ACTION_SPACE.get(str(a))
+                if gi is not None:
+                    legal_global.append(gi)
+                    if a == -1:
+                        raw_legal.append('DRAW')
+                    elif a == -2:
+                        raw_legal.append('PASS')
+                    elif a == -3:
+                        raw_legal.append('H')
+                    elif a == -4:
+                        raw_legal.append('D')
+                    elif a == -5:
+                        raw_legal.append('C')
+                    elif a == -6:
+                        raw_legal.append('S')
+
+        state['legal_actions'] = {int(a): None for a in legal_global}
+        state['raw_legal_actions'] = raw_legal
+
         return state
     
     def _decode_action(self, action):
@@ -63,13 +143,27 @@ class KadiEnv(Env):
         Returns:
             int: Card index or -1 for draw
         """
-        legal_actions = self._get_legal_actions()
-        
-        if action >= len(legal_actions):
-            # If action is out of bounds, return draw
+        # Action expected to be an integer in the fixed global space [0..57]
+        # Use ACTION_LIST via index_to_action helper
+        act = index_to_action(action)
+        if act is None:
             return -1
-        
-        return legal_actions[action]
+        # Special actions
+        if act == 'DRAW':
+            return -1
+        if act == 'PASS':
+            return -2
+        if act in ['H', 'D', 'C', 'S']:
+            # map declared suit to corresponding negative code
+            suit_to_code = {'H': -3, 'D': -4, 'C': -5, 'S': -6}
+            return suit_to_code[act]
+
+        # Otherwise act is a card string like 'H4': find it in player's hand
+        player = self.game.current_player
+        for i, c in enumerate(self.game.players[player].hand):
+            if c.get_index() == act:
+                return i
+        return -1
     
     def _get_legal_actions(self):
         """Get legal actions for current player"""

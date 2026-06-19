@@ -356,8 +356,10 @@ class KadiGame:
     @staticmethod
     def get_num_actions():
         """Get total number of possible actions"""
-        # 52 cards + 1 draw action = 53
-        return 53
+        # Action space: 52 distinct card identities (no jokers)
+        # plus 6 special actions: draw, pass, select suit H/D/C/S
+        # Total = 52 + 6 = 58
+        return 58
     
     def get_payoffs(self):
         """
