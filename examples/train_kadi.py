@@ -8,6 +8,7 @@ import os
 import argparse
 
 import torch
+import sys
 
 import rlcard
 from rlcard.utils import (
@@ -30,7 +31,14 @@ def train(args):
     if args.algorithm == 'dmc':
         # DMC trainer runs its own actor/learner processes; for debug, print
         # one sample episode then delegate to trainer unless --debug-only.
-        from rlcard.agents.dmc_agent import DMCTrainer
+        try:
+            from rlcard.agents.dmc_agent import DMCTrainer
+        except ModuleNotFoundError as e:
+            # Common missing dependency: GitPython provides `git` module
+            if e.name == 'git':
+                print("Missing dependency 'git' (GitPython). Install with: pip install GitPython")
+                sys.exit(1)
+            raise
 
         if args.debug:
             # Print one sample episode for verification
@@ -40,6 +48,18 @@ def train(args):
                 print(t)
             if args.debug_only:
                 return
+
+        # Ensure env exposes the attributes DMCTrainer expects
+        # state_shape: list per player like [[state_len], ...]
+        # action_shape: list per player like [None, None, ...]
+        if not hasattr(env, 'state_shape') or env.state_shape is None:
+            try:
+                state_len = env.state_space.get('obs_shape')[0]
+            except Exception:
+                state_len = None
+            env.state_shape = [[state_len] for _ in range(env.num_players)]
+        if not hasattr(env, 'action_shape') or env.action_shape is None:
+            env.action_shape = [None for _ in range(env.num_players)]
 
         trainer = DMCTrainer(
             env,
