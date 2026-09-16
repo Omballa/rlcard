@@ -20,6 +20,15 @@ from rlcard.utils import (
     plot_curve,
 )
 
+def evaluate_kadi(env, num_games):
+    total_reward = 0.0
+
+    for _ in range(num_games):
+        _, payoffs = env.run(is_training=False)
+        total_reward += payoffs[0]
+
+    return total_reward / num_games
+
 
 def train(args):
     device = get_device()
@@ -168,7 +177,7 @@ def train(args):
 
             # Periodic evaluation
             if episode % args.evaluate_every == 0:
-                perf = tournament(env, args.num_eval_games)[0]
+                perf = evaluate_kadi(env, args.num_eval_games)
                 logger.log_performance(episode, perf)
                 print('Episode', episode, 'evaluation perf:', perf)
 
