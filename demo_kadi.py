@@ -5,8 +5,9 @@ Shows how to use the Kadi game in RLCard
 """
 
 import rlcard
-from rlcard.agents.random_agent import RandomAgent
+from rlcard.agents.kadi_agent import KadiAgent
 import sys
+import numpy as np
 
 
 def demo_basic_game():
@@ -22,7 +23,7 @@ def demo_basic_game():
     print(f"   Number of actions: {env.num_actions}")
     
     # Set up agents
-    agents = [RandomAgent(env.num_actions) for _ in range(env.num_players)]
+    agents = [KadiAgent(env.num_actions) for _ in range(env.num_players)]
     env.set_agents(agents)
     print(f"✅ Agents set up: {len(agents)} random agents")
     
@@ -33,27 +34,73 @@ def demo_basic_game():
     
     state, player_id = env.reset()
     step = 0
-    
-    while not env.game.is_over() and step < 500:
+
+    while not env.game.is_over():
+        current_player = env.game.current_player
         legal_actions = env._get_legal_actions()
-        action = legal_actions[0]
-        
-        state, player_id = env.step(action)
+
+        # Convert raw actions into readable values
+        readable_actions = []
+        for action in legal_actions:
+            if action >= 0:
+                card = env.game.players[current_player].hand[action]
+                readable_actions.append(f"{action} -> {card.get_index()}")
+            else:
+                special_actions = {
+                    -1: "DRAW",
+                    -2: "PASS",
+                    -3: "DECLARE H",
+                    -4: "DECLARE D",
+                    -5: "DECLARE C",
+                    -6: "DECLARE S",
+                }
+                readable_actions.append(f"{action} -> {special_actions[action]}")
+
+        # Select a random playable action, drawing only when necessary.
+        state = env.get_state(current_player)
+        action, _ = agents[current_player].eval_step(state)
+        action = next(
+            raw_action
+            for raw_action, global_action in zip(
+                legal_actions, state['legal_actions'].keys()
+            )
+            if global_action == action
+        )
+
+        if action >= 0:
+            selected_action = (
+                f"{action} -> "
+                f"{env.game.players[current_player].hand[action].get_index()}"
+            )
+        else:
+            selected_action = next(
+                value for value in readable_actions
+                if value.startswith(f"{action} ->")
+            )
+
+        print(f"\n--- Step {step + 1} ---")
+        print(f"Current player: Player {current_player}")
+        print(f"Player 0 hand: {[card.get_index() for card in env.game.players[0].hand]}")
+        print(f"Player 1 hand: {[card.get_index() for card in env.game.players[1].hand]}")
+        print(f"Top card: {env.game.dealer.get_top_card().get_index()}")
+        print(f"Direction: {env.game.direction}")
+        print(f"Declared suit: {env.game.declared_suit}")
+        print(f"Current penalty: {env.game.current_penalty}")
+        print(f"Available actions: {readable_actions}")
+        print(f"Selected action: {selected_action}")
+        print(f"Draw pile: {len(env.game.dealer.deck)}")
+
+        # These are raw game actions, so raw_action must be True
+        state, player_id = env.step(action, raw_action=True)
         step += 1
-        
-        # Print game info every 10 steps
-        if step % 10 == 0:
-            print(f"Step {step}: Player {player_id}'s turn - " 
-                  f"Cards: {state['current_player']} | Top: {state.get('top_card', 'None')}")
-    
-    # Get results
+
+    print("\n=== Final state ===")
+    print(f"Player 0 hand: {[card.get_index() for card in env.game.players[0].hand]}")
+    print(f"Player 1 hand: {[card.get_index() for card in env.game.players[1].hand]}")
+    print(f"Top card: {env.game.dealer.get_top_card().get_index()}")
+    print(f"Payoffs: {env.get_payoffs()}")
+
     payoffs = env.get_payoffs()
-    print("\n" + "-" * 60)
-    print("Game Results")
-    print("-" * 60)
-    print(f"Total steps: {step}")
-    print(f"Payoffs: {payoffs}")
-    
     # Find winner
     max_payoff = max(payoffs)
     if max_payoff > 0:
@@ -101,7 +148,7 @@ def demo_step_back():
     # Take a step
     legal_actions = env._get_legal_actions()
     action = legal_actions[0]
-    state, new_player_id = env.step(action)
+    state, new_player_id = env.step(action, raw_action=True)
     
     print(f"After step: Player {new_player_id}")
     
@@ -126,7 +173,7 @@ def demo_multiple_games():
     
     for game_num in range(num_games):
         env = rlcard.make('kadi')
-        agents = [RandomAgent(env.num_actions) for _ in range(env.num_players)]
+        agents = [KadiAgent(env.num_actions) for _ in range(env.num_players)]
         env.set_agents(agents)
         
         state, player_id = env.reset()
@@ -135,7 +182,7 @@ def demo_multiple_games():
         while not env.game.is_over() and step < 500:
             legal_actions = env._get_legal_actions()
             action = legal_actions[0]
-            state, player_id = env.step(action)
+            state, player_id = env.step(action, raw_action=True)
             step += 1
         
         payoffs = env.get_payoffs()

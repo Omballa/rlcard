@@ -117,10 +117,10 @@ def train(args):
         raise ValueError('Unsupported algorithm: %s' % args.algorithm)
 
     # Use random agents as opponents
-    from rlcard.agents import RandomAgent
+    from rlcard.agents import KadiAgent
     agents = [agent]
     for _ in range(1, env.num_players):
-        agents.append(RandomAgent(num_actions=env.num_actions))
+        agents.append(KadiAgent(num_actions=env.num_actions))
     env.set_agents(agents)
 
     # Training loop

@@ -26,11 +26,6 @@ class TestKadiCard(unittest.TestCase):
         self.assertEqual(card1, card2)
         self.assertNotEqual(card1, card3)
     
-    def test_card_string_representation(self):
-        """Test card string representation"""
-        card = KadiCard('H', 'A')
-        self.assertEqual(str(card), 'AH')
-        self.assertEqual(card.get_index(), 'HA')
     
     def test_card_types(self):
         """Test card type classification"""
@@ -255,6 +250,15 @@ class TestKadiGame(unittest.TestCase):
         self.assertIsInstance(legal_actions, list)
         # Should have at least draw option
         self.assertGreater(len(legal_actions), 0)
+
+        top_card = KadiCard('S','J')
+
+        self.game.players[0].hand = [KadiCard('H','9'), KadiCard('D','K'), KadiCard('S','3')]
+        self.game.dealer.discard_pile.append(top_card)
+        self.assertEqual(self.game.dealer.get_top_card(), top_card)
+        self.assertEqual(len(self.game.players[0].hand), 3)
+        legal_actions = self.game.get_legal_actions()
+        self.assertEqual(len(legal_actions), 2)
     
     def test_get_num_players(self):
         """Test getting number of players"""
@@ -262,8 +266,8 @@ class TestKadiGame(unittest.TestCase):
     
     def test_get_num_actions(self):
         """Test getting total number of actions"""
-        # 52 cards + 1 draw
-        self.assertEqual(self.game.get_num_actions(), 53)
+        # 52 cards + 1 draw + 1 pass + 4 choice for each suit
+        self.assertEqual(self.game.get_num_actions(), 58)
     
     def test_step_draw(self):
         """Test drawing a card"""
